@@ -41,41 +41,97 @@ def calculate_weight_gradient(X, Y, w, b):
     # m is the size of the data set
     m = len(X)
 
-    gradient = 0
+    sum = 0
     for i in range(0, m):
         x = X[i]
         y = Y[i]
         y_hat = model_function(X[i], w, b)
         # hard-coding the partial derivative of the cost function J with respect
         # to w:
-        gradient += (y_hat - y) * x
+        sum += (y_hat - y) * x
 
-    gradient = gradient / m
+    return sum / m
+
+
+# evaluates gradient for bias b for a given set of X features and Y targets
+def calculate_bias_gradient(X, Y, w, b):
+
+    if len(X) != len(Y):
+        raise ValueError("mismatch in features and targets")
+
+    # m is the size of the data set
+    m = len(X)
+
+    sum = 0
+    for i in range(0, m):
+        x = X[i]
+        y = Y[i]
+        y_hat = model_function(X[i], w, b)
+        # hard-coding the partial derivative of the cost function J with respect
+        # to b:
+        sum += y_hat - y
+
+    return sum / m
 
     return gradient
 
 
+# returns the mean squared error cost function for given x/y pairs and linear
+# model y = wx + b
+def calculate_cost(X, Y, w, b):
+
+    if len(X) != len(Y):
+        raise ValueError("mismatch in features and targets")
+
+    # m is the size of the data set
+    m = len(X)
+
+    sum = 0
+    for i in range(0, m):
+        x = X[i]
+        y = Y[i]
+        y_hat = model_function(X[i], w, b)
+        sum += (y_hat - y) ** 2
+
+    return sum / (2 * m)
+
+
 def perform_gradient_decent(X, Y, **params):
     w = params.get("w_initial", 1)
-    b = 0  # not worrying about b for now
-    alpha = params.get("alpha", 0.5)
-    threshold = params.get("threshold", 1e-5)
-    max_iterations = params.get("threshold", 1e3)
+    b = params.get("b_initial", 0)
+    learning_rate_alpha = params.get("learning_rate_alpha", 0.5)
+    threshold_epsilon = params.get("threshold_epsilon", 1e-5)
+    max_iterations = params.get("max_iterations", 100)
 
-    # set an initial gradient update that will meet the loop conditions.
-    gradient_update = threshold + 1
+    # set initial cost that meets loop conditions
+    cost = threshold_epsilon + 1
 
     i = 0
-    while abs(gradient_update) > threshold:
+    while cost > threshold_epsilon:
         i += 1
         if i > max_iterations:
             print(f"stopping - {max_iterations} maximum iterations reached")
             break
-        gradient_update = alpha * calculate_weight_gradient(X, Y, w, b)
-        w = w - gradient_update
-        print(f"w (slope) guess {i}: {w}; gradient update: {gradient_update}")
+
+        # update w first
+        weight_update = learning_rate_alpha * calculate_weight_gradient(
+            X, Y, w, b
+        )
+        w = w - weight_update
+
+        # update b only after w
+        bias_update = learning_rate_alpha * calculate_bias_gradient(X, Y, w, b)
+        b = b - bias_update
+
+        # updating cost to break loop once convergence is reached
+        cost = calculate_cost(X, Y, w, b)
+        print(
+            f"guess {i} -- cost: {cost}, w: {w} ({weight_update}), b: {b} ({bias_update})"
+        )
     else:
-        print(f"finished - minimum update threshold {threshold} reached")
+        print(
+            f"finished - update threshold (episilon) {threshold_epsilon} reached"
+        )
 
     print(f"w {w} calculated in {i} steps")
 
@@ -90,7 +146,8 @@ w_final, b_final = perform_gradient_decent(
     X,
     Y,
     w_initial=99,
-    alpha=0.22,
+    b_initial=99,
+    learning_rate_alpha=1,
 )
 
 print("w and b are estimated to be:")
